@@ -47,14 +47,41 @@
         $("<div></div>").attr("id", "fb-root").appendTo("body");
       }
       loading.done(function() {
+        Fb.permissions = {};
         FB.init(Fb.defaults);
         FB.inited = true;
+        FB.underPermission = Fb.underPermission;
+        FB.Event.subscribe("auth.statusChange", function() {
+          Fb.getPermissions();
+        });
         initializing.resolve();
       });
     },
 
     ready: function(cb) {
       initializing.done(cb);
+    },
+
+    getPermissions: function(cb) {
+      FB.api('/me/permissions', function (response) {
+        Fb.permissions = response.data[0];
+        if(cb) {cb();}
+      });
+    },
+
+    underPermission: function(permission, cb) {
+      // User does have the permission granted already, go ahead
+      if(Fb.permissions[permission]) {
+        cb(true);
+      }
+      // User does NOT have such permission granted yet, ask for it
+      else {
+        FB.login(function(response) {
+          Fb.getPermissions(function() {
+            cb(Fb.permissions[permission]);
+          });
+        }, {scope: permission})
+      }
     }
   });
 
