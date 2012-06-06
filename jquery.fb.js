@@ -11,7 +11,8 @@
 ;(function( window, $, undefined ) {
   
   var Fb,
-      $document = $(document);
+      loading = $.Deferred(),
+      initializing = $.Deferred();
 
   /**
    * Fb instance constructor
@@ -35,39 +36,25 @@
     inited: false,
 
     postLoad: function() {
-      console.log("FB", "loaded");
-      if(Fb.loaded) {return;}
       Fb.loaded = true;
-      $document.triggerHandler("fb-loaded");
+      loading.resolve();
     },
 
     init: function(options) {
-      var init = function() {
-        console.log("FB", "init", JSON.stringify(Fb.defaults));
-        FB.init(Fb.defaults);
-        FB.inited = true;
-        $document.triggerHandler("fb-ready");
-      };
       options || (options = {});
       $.extend(Fb.defaults, options);
       if($("fb-root").length == 0) {
         $("<div></div>").attr("id", "fb-root").appendTo("body");
       }
-      if(Fb.loaded) {
-        init();
-      }
-      else {
-        $document.bind("fb-loaded", function() {init();});
-      }
+      loading.done(function() {
+        FB.init(Fb.defaults);
+        FB.inited = true;
+        initializing.resolve();
+      });
     },
 
     ready: function(cb) {
-      if(this.inited) {
-        cb();
-      }
-      else {
-        $document.bind("fb-ready", function() {cb();});
-      }
+      initializing.done(cb);
     }
   });
 
@@ -75,7 +62,6 @@
 
   // Load the API Asynchronously when document is ready
   $(function() {
-    console.log("FB", "load");
     var script = document.createElement("script");
     script.id = "facebook-jssdk";
     script.async = true;
