@@ -47,7 +47,7 @@
         $("<div></div>").attr("id", "fb-root").appendTo("body");
       }
       loading.done(function() {
-        Fb.permissions = {};
+        FB.permissions = {};
         FB.init(Fb.defaults);
         FB.inited = true;
         FB.underPermission = Fb.underPermission;
@@ -64,21 +64,21 @@
 
     getPermissions: function(cb) {
       FB.api('/me/permissions', function (response) {
-        Fb.permissions = response.data[0];
+        FB.permissions = response.data[0];
         if(cb) {cb();}
       });
     },
 
     underPermission: function(permission, cb) {
       // User does have the permission granted already, go ahead
-      if(Fb.permissions[permission]) {
+      if(FB.permissions[permission]) {
         cb(true);
       }
       // User does NOT have such permission granted yet, ask for it
       else {
         FB.login(function(response) {
           Fb.getPermissions(function() {
-            cb(Fb.permissions[permission]);
+            cb(FB.permissions[permission]);
           });
         }, {scope: permission})
       }
