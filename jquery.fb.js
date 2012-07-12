@@ -69,16 +69,25 @@
       });
     },
 
+    checkPermission: function(permission) {
+      var permissions = permission.split(","),
+          i;
+      for( i = 0;
+           i < permissions.length && FB.permissions[permissions[i].trim()];
+           i++ );
+      return i == permissions.length;
+    },
+
     underPermission: function(permission, cb) {
       // User does have the permission granted already, go ahead
-      if(FB.permissions[permission]) {
+      if(Fb.checkPermission(permission)) {
         cb(true);
       }
       // User does NOT have such permission granted yet, ask for it
       else {
         FB.login(function(response) {
           Fb.getPermissions(function() {
-            cb(FB.permissions[permission]);
+            cb(Fb.checkPermission(permission));
           });
         }, {scope: permission})
       }
