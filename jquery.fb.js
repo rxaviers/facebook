@@ -12,7 +12,8 @@
   
   var Fb,
       loading = $.Deferred(),
-      initializing = $.Deferred();
+      initializing = $.Deferred(),
+      getting_permission = $.Deferred();
 
   /**
    * Fb instance constructor
@@ -63,8 +64,12 @@
     },
 
     getPermissions: function(cb) {
+      var prev_getting_permission = getting_permission;
+      getting_permission = $.Deferred();
       FB.api('/me/permissions', function (response) {
         FB.permissions = response.data[0];
+        prev_getting_permission.resolve();
+        getting_permission.resolve();
         if(cb) {cb();}
       });
     },
@@ -79,18 +84,20 @@
     },
 
     underPermission: function(permission, cb) {
-      // User does have the permission granted already, go ahead
-      if(Fb.checkPermission(permission)) {
-        cb(true);
-      }
-      // User does NOT have such permission granted yet, ask for it
-      else {
-        FB.login(function(response) {
-          Fb.getPermissions(function() {
-            cb(Fb.checkPermission(permission));
-          });
-        }, {scope: permission})
-      }
+      getting_permission.done(function() {
+        // User does have the permission granted already, go ahead
+        if(Fb.checkPermission(permission)) {
+          cb(true);
+        }
+        // User does NOT have such permission granted yet, ask for it
+        else {
+          FB.login(function(response) {
+            Fb.getPermissions(function() {
+              cb(Fb.checkPermission(permission));
+            });
+          }, {scope: permission})
+        }
+      });
     }
   });
 
