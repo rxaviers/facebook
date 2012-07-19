@@ -13,7 +13,8 @@
   var Fb,
       loading = $.Deferred(),
       initializing = $.Deferred(),
-      getting_permission = $.Deferred();
+      getting_permission = $.Deferred(),
+      granted_permissions;
 
   /**
    * Fb instance constructor
@@ -48,12 +49,12 @@
         $("<div></div>").attr("id", "fb-root").appendTo("body");
       }
       loading.done(function() {
-        FB.permissions = {};
         FB.init(Fb.defaults);
         FB.inited = true;
+        FB.hasPermission = Fb.hasPermission;
         FB.underPermission = Fb.underPermission;
         FB.Event.subscribe("auth.statusChange", function() {
-          Fb.getPermissions();
+          Fb._getPermissions();
         });
         initializing.resolve();
       });
@@ -63,40 +64,44 @@
       initializing.done(cb);
     },
 
-    getPermissions: function(cb) {
+    _getPermissions: function(cb) {
       var prev_getting_permission = getting_permission;
       getting_permission = $.Deferred();
-      FB.api('/me/permissions', function (response) {
-        FB.permissions = response.data[0];
+      FB.api("/me/permissions", function (response) {
+        granted_permissions = response.data[0];
         prev_getting_permission.resolve();
         getting_permission.resolve();
         if(cb) {cb();}
       });
     },
 
-    checkPermission: function(permission) {
+    _checkPermission: function(permission) {
       var permissions = permission.split(","),
           i;
       for( i = 0;
-           i < permissions.length && FB.permissions[permissions[i].trim()];
+           i < permissions.length && granted_permissions[permissions[i].trim()];
            i++ );
       return i == permissions.length;
     },
 
-    underPermission: function(permission, cb) {
+    hasPermission: function(permission, yes, no) {
       getting_permission.done(function() {
-        // User does have the permission granted already, go ahead
-        if(Fb.checkPermission(permission)) {
-          cb(true);
+        if(Fb._checkPermission(permission)) {
+          yes();
         }
-        // User does NOT have such permission granted yet, ask for it
         else {
-          FB.login(function(response) {
-            Fb.getPermissions(function() {
-              cb(Fb.checkPermission(permission));
-            });
-          }, {scope: permission})
+          no();
         }
+      });
+    },
+
+    underPermission: function(permission, yes, no) {
+      Fb.hasPermission(permission, yes, function() {
+        // User does NOT have such permission granted yet, ask for it
+        FB.login(function(response) {
+          Fb._getPermissions();
+          Fb.hasPermission(permission, yes, no);
+        }, {scope: permission});
       });
     }
   });
