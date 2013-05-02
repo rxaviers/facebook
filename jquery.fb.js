@@ -68,7 +68,7 @@
       var prev_getting_permission = getting_permission;
       getting_permission = $.Deferred();
       FB.api("/me/permissions", function (response) {
-        granted_permissions = response.data[0];
+        granted_permissions = response.data ? response.data[0] : {};
         prev_getting_permission.resolve();
         getting_permission.resolve();
         if(cb) {cb();}
