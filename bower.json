@@ -1,0 +1,7 @@
+{
+  "name": "facebook",
+  "version": "0.1.0-pre",
+  "dependencies": {
+    "jquery": "*"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "facebook",
+  "version": "0.1.0-pre",
+  "description": "Facebook library made a little easier",
+  "keywords": [
+    "facebook",
+    "api",
+    "utility",
+    "library"
+  ],
+  "main": "facebook.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/rxaviers/facebook.git"
+  },
+  "readmeFilename": "README.md",
+  "author": {
+    "name": "Rafael Xavier de Souza",
+    "email": "rxaviers@gmail.com",
+    "url": "http://rafael.xavier.blog.br"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/jzaefferer/grunt-css/blob/master/LICENSE-MIT"
+    }
+  ],
+  "devDependencies": {
+    "grunt": "0.4.x",
+    "grunt-contrib-jshint": "0.6.x",
+    "matchdep": "*"
+  }
+}
