@@ -58,7 +58,7 @@ define([
       cookie: true,
       oauth: true,
       status: true, 
-      xfbml: true
+      xfbml: false
     },
 
     hasPermission: function(permission, yes, no) {
@@ -111,14 +111,16 @@ define([
     };
   });
 
-  // Load the API Asynchronously when document is ready
-  $(function() {
-    $.ajax({
-      url: "http://connect.facebook.net/en_US/all.js",
-      cache: true,
-      dataType: "script"
-    }).done(_postLoad);
-  });
+  // Load the API Asynchronously.
+  window.fbAsyncInit = _postLoad;
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "//connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, "script", "facebook-jssdk"));
 
   return Fb;
 });
