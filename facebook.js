@@ -1,11 +1,9 @@
 /*
  * Facebook made easier
  *
- * Dual licensed under the MIT and GPL Version 2 licenses:
- * http://www.opensource.org/licenses/mit-license.php
- * http://www.gnu.org/licenses/gpl.html
- *
- * Copyright (c) 2011 Rafael Xavier de Souza (http://rafael.xavier.blog.br)
+ * Copyright Rafael Xavier de Souza
+ * Released under the MIT license
+ * https://github.com/rxaviers/facebook/blob/master/LICENSE-MIT
  */
 define([
   "jquery"
