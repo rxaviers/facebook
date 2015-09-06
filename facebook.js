@@ -5,9 +5,20 @@
  * Released under the MIT license
  * https://github.com/rxaviers/facebook/blob/master/LICENSE-MIT
  */
-define([
-  "jquery"
-], function($) {
+(function(root, factory) {
+  // UMD returnExports
+  if (typeof define === "function" && define.amd) {
+    // AMD
+    define(["jquery"], factory);
+  } else if (typeof exports === "object") {
+    // Node, CommonJS
+    module.exports = factory(require("jquery"));
+  } else {
+    // Extend global
+    factory(root.jQuery);
+  }
+}(this, function($) {
+
   var Fb, ready,
       loading = $.Deferred(),
       initializing = $.Deferred(),
@@ -121,4 +132,5 @@ define([
    }(document, "script", "facebook-jssdk"));
 
   return Fb;
-});
+
+}));
