@@ -109,7 +109,7 @@
   });
 
   // Proxy async methods
-  $.each(["api", "getLoginStatus", "login", "ui"], function(i, method) {
+  $.each(["api", "getLoginStatus", "login", "logout", "ui"], function(i, method) {
     Fb[method] = function() {
       var fn,
           args = arguments;
