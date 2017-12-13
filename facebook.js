@@ -1,136 +1,192 @@
+/* globals FB, Promise */
 /*
- * Facebook made easier
- *
- * Copyright Rafael Xavier de Souza
- * Released under the MIT license
- * https://github.com/rxaviers/facebook/blob/master/LICENSE-MIT
- */
-(function(root, factory) {
-  // UMD returnExports
-  if (typeof define === "function" && define.amd) {
-    // AMD
-    define(["jquery"], factory);
-  } else if (typeof exports === "object") {
-    // Node, CommonJS
-    module.exports = factory(require("jquery"));
-  } else {
-    // Extend global
-    factory(root.jQuery);
-  }
-}(this, function($) {
+* Facebook made easier
+*
+* Copyright Rafael Xavier de Souza
+* Released under the MIT license
+* https://github.com/rxaviers/facebook/blob/master/LICENSE-MIT
+*/
 
-  var Fb, ready,
-      loading = $.Deferred(),
-      initializing = $.Deferred(),
-      getting_permission = $.Deferred(),
-      granted_permissions;
+require("es6-promise/auto");
+var ObjectAssign = require("object-assign");
 
-  ready = initializing.done;
+var Fb;
+var loadingResolve;
+var readyResolve;
 
-  function _postLoad() {
-    loading.resolve();
-  }
+var loading = new Promise(function(resolve) {
+  loadingResolve = resolve;
+});
 
-  function _getPermissions(cb) {
-    var prev_getting_permission = getting_permission;
-    getting_permission = $.Deferred();
-    FB.api("/me/permissions", function (response) {
-      granted_permissions = response.data ? response.data[0] : {};
-      prev_getting_permission.resolve();
-      getting_permission.resolve();
-      if(cb) {cb();}
+var ready = new Promise(function(resolve) {
+  readyResolve = resolve;
+});
+
+function _postLoad() {
+  loadingResolve();
+}
+
+var cachedGetPermissions;
+function getPermissions() {
+  if (!cachedGetPermissions) {
+    cachedGetPermissions = Fb.api("/me/permissions").then(function(response) {
+      if (!response.data) {
+        return [];
+      }
+      return response.data
+        .filter(function(entry) {
+          return entry.status === "granted";
+        })
+        .map(function(entry) {
+          return entry.permission;
+        });
+    }).then(function(data) {
+      return data;
     });
   }
+  return cachedGetPermissions;
+}
 
-  function _checkPermission(permission) {
-    var i,
-        permissions = permission.split(",");
-    for( i = 0;
-         i < permissions.length && granted_permissions[permissions[i].trim()];
-         i++ );
-    return i == permissions.length;
-  }
+function alwaysArray(stringOrArray) {
+  return Array.isArray(stringOrArray) ? stringOrArray : stringOrArray ? [stringOrArray] : [];
+}
 
+function includesAll(set, subset) {
+  return subset.every(function(subsetElement) {
+    return set.indexOf(subsetElement) !== -1;
+  });
+}
 
-  /**
-   * Fb instance constructor
-   */
-  Fb = function() {
-  };
+/**
+ * Fb class
+ */
+Fb = function() {};
 
-  /**
-   * Fb static
-   */
-  $.extend(Fb, {
-    defaults: {
-      appId: '',    // required, pass thru init() options
-      cookie: true,
-      oauth: true,
-      status: true, 
-      xfbml: false
-    },
+/**
+ * Our own methods
+ */
+ObjectAssign(Fb, {
+  defaults: {
+    appId: "",    // required, pass thru init() options
+    cookie: true,
+    oauth: true,
+    status: true,
+    xfbml: false
+  },
 
-    hasPermission: function(permission, yes, no) {
-      ready(function() {
-        getting_permission.done(function() {
-          if(_checkPermission(permission)) {
-            yes();
-          }
-          else {
-            no();
-          }
-        });
+  init: function(options) {
+    options = ObjectAssign({}, Fb.defaults, options);
+    loading.then(function() {
+      FB.init(options);
+      FB.Event.subscribe("auth.statusChange", function(response) {
+        cachedGetPermissions = null;
+        if (response.authResponse) {
+          getPermissions();
+        }
       });
-    },
+      readyResolve();
+    });
+  },
 
-    init: function(options) {
-      options = $.extend({}, Fb.defaults, options);
-      loading.done(function() {
-        FB.init(options);
-        FB.Event.subscribe("auth.statusChange", function() {
-          _getPermissions();
-        });
-        initializing.resolve();
-      });
-    },
+  ready: ready,
 
-    ready: ready,
+  // Returns a promise that resolves if user has been granted all permissions, otherwise it rejects.
+  hasPermission: function(permissions) {
+    permissions = alwaysArray(permissions);
+    return getPermissions().then(function(grantedPermissions) {
+      if(!includesAll(grantedPermissions, permissions)) {
+        return Promise.reject(new Error("Access denied"));
+      }
+      return Promise.resolve();
+    });
+  },
 
-    underPermission: function(permission, yes, no) {
-      // Note Fb.hasPermission is already ready scoped.
-      Fb.hasPermission(permission, yes, function() {
+  // Returns a promise that resolves if permission is granted, otherwise it rejects.
+  underPermission: function(permissions) {
+    // Note Fb.hasPermission is already ready scoped.
+    return Fb.hasPermission(permissions)
+      .catch(function() {
         // User does NOT have such permission granted yet, ask for it
-        FB.login(function(response) {
-          _getPermissions();
-          Fb.hasPermission(permission, yes, no);
-        }, {scope: permission});
+        return Fb.login({scope: permissions})
+          .then(function() {
+            return Fb.hasPermission(permissions);
+          });
+      });
+  }
+});
+
+/**
+ * Proxy FB methods
+ */
+ObjectAssign(Fb, {
+  api: function(/*path[[, method], params]*/) {
+    var args = [].slice.apply(arguments, [0]);
+    return ready.then(function() {
+      return new Promise(function(resolve, reject) {
+        FB.api.apply(FB.api, args.concat(function(response) {
+          if (!response || response.error) {
+            reject(response.error);
+            return;
+          }
+          resolve(response);
+        }));
+      });
+    });
+  },
+
+  login: function(opts) {
+    opts = opts || {};
+
+    // Transform array opts.scope into comma separated list of scopes string.
+    if (Array.isArray(opts.scope)) {
+      opts = ObjectAssign({}, opts, {
+        scope: opts.scope.join(",")
       });
     }
-  });
 
-  // Proxy async methods
-  $.each(["api", "getLoginStatus", "login", "logout", "ui"], function(i, method) {
-    Fb[method] = function() {
-      var fn,
-          args = arguments;
-      ready(function() {
-        fn = FB[method];
-        fn.apply(fn, args);
+    return ready.then(function() {
+      return new Promise(function(resolve) {
+        FB.login(function(response) {
+          cachedGetPermissions = null;
+          resolve(response);
+        }, opts);
       });
-    };
-  });
+    });
+  },
 
-  // Load the API Asynchronously.
-  window.fbAsyncInit = _postLoad;
+  ui: function(params) {
+    return ready.then(function() {
+      return new Promise(function(resolve) {
+        FB.ui(params, function(response) {
+          resolve(response);
+        });
+      });
+    });
+  }
+});
 
-  (function(d, s, id){
-     var js, fjs = d.getElementsByTagName(s)[0];
-     if (d.getElementById(id)) {return;}
-     js = d.createElement(s); js.id = id;
-     js.src = "//connect.facebook.net/en_US/sdk.js";
-     fjs.parentNode.insertBefore(js, fjs);
-   }(document, "script", "facebook-jssdk"));
+// Proxy other FB methods:
+["getLoginStatus", "logout"].forEach(function(method) {
+  Fb[method] = function() {
+    return ready.then(function() {
+      return new Promise(function(resolve) {
+        FB[method](function(response) {
+          resolve(response);
+        });
+      });
+    });
+  };
+});
 
-  return Fb;
+// Load the API Asynchronously.
+window.fbAsyncInit = _postLoad;
 
-}));
+(function(d, s, id){
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, "script", "facebook-jssdk"));
+
+module.exports = Fb;

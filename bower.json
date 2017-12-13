@@ -1,7 +1,0 @@
-{
-  "name": "facebook",
-  "dependencies": {
-    "jquery": "*"
-  },
-  "main": "facebook.js"
-}

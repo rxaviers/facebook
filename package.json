@@ -26,8 +26,10 @@
     }
   ],
   "devDependencies": {
-    "grunt": "0.4.x",
-    "grunt-contrib-jshint": "0.6.x",
-    "matchdep": "*"
+    "eslint": "^4.13.1"
+  },
+  "dependencies": {
+    "es6-promise": "^4.1.1",
+    "object-assign": "^4.1.1"
   }
 }
